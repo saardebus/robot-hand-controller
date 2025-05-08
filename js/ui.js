@@ -38,12 +38,44 @@ const UI = (function() {
         minChangeInput = document.getElementById('min-change');
         sendIntervalInput = document.getElementById('send-interval');
         
-        // Formula inputs
+        // Generate formula inputs based on CONFIG.SERVOS
+        generateFormulaInputs();
+    }
+    
+    // Generate formula inputs based on CONFIG.SERVOS
+    function generateFormulaInputs() {
+        const formulaContainer = document.getElementById('formula-container');
+        
+        if (!formulaContainer) {
+            console.error('Formula container not found');
+            return;
+        }
+        
+        // Clear container
+        formulaContainer.innerHTML = '';
+        
+        // Generate formula inputs for each servo
         CONFIG.SERVOS.forEach(servo => {
-            const inputElement = document.getElementById(`formula-${servo.id}`);
-            if (inputElement) {
-                formulaInputs[servo.id] = inputElement;
-            }
+            const formulaGroup = document.createElement('div');
+            formulaGroup.className = 'formula-group';
+            formulaGroup.setAttribute('data-servo-id', servo.id);
+            
+            const label = document.createElement('label');
+            label.setAttribute('for', `formula-${servo.id}`);
+            label.textContent = `${servo.name} (ID: ${servo.id}):`;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = `formula-${servo.id}`;
+            input.className = 'formula-input';
+            input.placeholder = 'Enter formula';
+            
+            formulaGroup.appendChild(label);
+            formulaGroup.appendChild(input);
+            formulaContainer.appendChild(formulaGroup);
+            
+            // Store input element reference
+            formulaInputs[servo.id] = input;
         });
     }
     
@@ -119,30 +151,8 @@ const UI = (function() {
             });
         }
         
-        // Formula inputs
-        for (const servoId in formulaInputs) {
-            const inputElement = formulaInputs[servoId];
-            
-            inputElement.addEventListener('input', function() {
-                validateFormula(servoId, inputElement.value);
-            });
-            
-            inputElement.addEventListener('change', function() {
-                const formula = inputElement.value.trim();
-                const isValid = ServoControl.updateFormula(servoId, formula);
-                
-                if (isValid) {
-                    inputElement.classList.remove('error');
-                    if (formula) {
-                        UI.showStatus(`Formula for servo ${servoId} updated`, 'info');
-                    }
-                } else {
-                    inputElement.classList.add('error');
-                    const errorMessage = ServoControl.getFormulaError(formula);
-                    UI.showStatus(`Invalid formula for servo ${servoId}: ${errorMessage}`, 'error');
-                }
-            });
-        }
+        // Set up event listeners for formula inputs
+        setupFormulaInputEventListeners();
         
         // Save configuration button
         const saveConfigButton = document.getElementById('save-config');
@@ -164,6 +174,33 @@ const UI = (function() {
             configFileInput.addEventListener('change', function(event) {
                 if (event.target.files.length > 0) {
                     loadConfiguration(event.target.files[0]);
+                }
+            });
+        }
+    }
+    
+    // Set up event listeners for formula inputs
+    function setupFormulaInputEventListeners() {
+        for (const servoId in formulaInputs) {
+            const inputElement = formulaInputs[servoId];
+            
+            inputElement.addEventListener('input', function() {
+                validateFormula(servoId, inputElement.value);
+            });
+            
+            inputElement.addEventListener('change', function() {
+                const formula = inputElement.value.trim();
+                const isValid = ServoControl.updateFormula(servoId, formula);
+                
+                if (isValid) {
+                    inputElement.classList.remove('error');
+                    if (formula) {
+                        UI.showStatus(`Formula for servo ${servoId} updated`, 'info');
+                    }
+                } else {
+                    inputElement.classList.add('error');
+                    const errorMessage = ServoControl.getFormulaError(formula);
+                    UI.showStatus(`Invalid formula for servo ${servoId}: ${errorMessage}`, 'error');
                 }
             });
         }

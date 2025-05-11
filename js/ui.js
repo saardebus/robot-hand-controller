@@ -8,7 +8,6 @@
 const UI = (function() {
     // Private variables
     let statusMessagesElement = null;
-    let fpsCounterElement = null;
     let calculatedValuesTableElement = null;
     let sentValuesTableElement = null;
     let robotStatusTableElement = null;
@@ -26,7 +25,6 @@ const UI = (function() {
     function initElements() {
         // Status elements
         statusMessagesElement = document.getElementById('status-messages');
-        fpsCounterElement = document.getElementById('fps-counter');
         calculatedValuesTableElement = document.getElementById('calculated-values-table').querySelector('tbody');
         sentValuesTableElement = document.getElementById('sent-values-table').querySelector('tbody');
         robotStatusTableElement = document.getElementById('robot-status-table').querySelector('tbody');
@@ -638,16 +636,6 @@ const UI = (function() {
             setTimeout(() => {
                 statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
             }, 10);
-        },
-        
-        /**
-         * Update FPS counter
-         * @param {number} fps - The current FPS
-         */
-        updateFps: function(fps) {
-            if (fpsCounterElement) {
-                fpsCounterElement.textContent = fps;
-            }
         },
         
         /**

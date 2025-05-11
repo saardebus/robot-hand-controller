@@ -16,8 +16,6 @@ const HandTracking = (function() {
     let isTracking = false;
     let lastFrameTime = 0;
     let frameCount = 0;
-    let fpsUpdateTime = 0;
-    let currentFps = 0;
     let showLandmarkIds = false;
     let noHandMessageElement = null;
     let handDetected = false;
@@ -26,7 +24,6 @@ const HandTracking = (function() {
     
     // Callbacks
     let onLandmarksUpdateCallback = null;
-    let onFpsUpdateCallback = null;
     let onHandDetectionChangeCallback = null;
     
     // Initialize the webcam and canvas
@@ -312,23 +309,6 @@ const HandTracking = (function() {
             return;
         }
         
-        // Calculate FPS
-        if (lastFrameTime !== 0) {
-            const deltaTime = timestamp - lastFrameTime;
-            frameCount++;
-            
-            // Update FPS counter every second
-            if (timestamp - fpsUpdateTime >= CONFIG.FPS_UPDATE_INTERVAL) {
-                currentFps = Math.round((frameCount * 1000) / (timestamp - fpsUpdateTime));
-                fpsUpdateTime = timestamp;
-                frameCount = 0;
-                
-                if (onFpsUpdateCallback) {
-                    onFpsUpdateCallback(currentFps);
-                }
-            }
-        }
-        
         lastFrameTime = timestamp;
         
         // Detect landmarks
@@ -441,7 +421,6 @@ const HandTracking = (function() {
             isTracking = true;
             lastFrameTime = 0;
             frameCount = 0;
-            fpsUpdateTime = 0;
             
             // Start detection loop
             animationFrameId = requestAnimationFrame(detectionLoop);
@@ -483,14 +462,6 @@ const HandTracking = (function() {
          */
         onLandmarksUpdate: function(callback) {
             onLandmarksUpdateCallback = callback;
-        },
-        
-        /**
-         * Set callback for FPS update
-         * @param {Function} callback - Function to call when FPS is updated
-         */
-        onFpsUpdate: function(callback) {
-            onFpsUpdateCallback = callback;
         },
         
         /**

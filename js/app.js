@@ -65,11 +65,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ServoControl.processLandmarks(landmarks);
             });
             
-            // Hand Tracking -> UI
-            HandTracking.onFpsUpdate(function(fps) {
-                UI.updateFps(fps);
-            });
-            
             HandTracking.onHandDetectionChange(function(detected) {
                 UI.updateHandDetectionStatus(detected);
             });

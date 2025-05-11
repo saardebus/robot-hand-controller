@@ -49,9 +49,6 @@ const CONFIG = {
     MIN_SERVO_VALUE: 0,
     MAX_SERVO_VALUE: 1023,
     
-    // Performance
-    FPS_UPDATE_INTERVAL: 1000, // ms
-    
     // Robot status update interval
     ROBOT_STATUS_UPDATE_INTERVAL: 2000, // ms
     

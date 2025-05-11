@@ -22,61 +22,113 @@
         </div>
 
         <div class="control-panel">
-            <div class="connection-settings">
-                <h2>Connection Settings</h2>
-                <div class="input-group">
-                    <label for="robot-ip">Robot Hand IP:</label>
-                    <div class="ip-input-container">
-                        <input type="text" id="robot-ip" placeholder="192.168.1.100">
-                        <div id="connection-indicator"></div>
+            <div class="tab-container">
+                <div class="tab-navigation">
+                    <button class="tab-button active" data-tab="control">Control</button>
+                    <button class="tab-button" data-tab="formulas">Formulas</button>
+                    <button class="tab-button" data-tab="monitoring">Monitoring</button>
+                    <button class="tab-button" data-tab="robot-status">Robot Status</button>
+                    <button class="tab-button" data-tab="status">Status</button>
+                </div>
+                
+                <!-- Control Tab -->
+                <div class="tab-content active" id="control-tab">
+                    <div class="connection-settings">
+                        <h2>Connection Settings</h2>
+                        <div class="input-group">
+                            <label for="robot-ip">Robot Hand IP:</label>
+                            <div class="ip-input-container">
+                                <input type="text" id="robot-ip" placeholder="192.168.1.100">
+                                <div id="connection-indicator"></div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="min-change">Minimum Change to Update:</label>
+                            <input type="number" id="min-change" min="0" max="100" value="2">
+                        </div>
+                        <div class="input-group">
+                            <label for="send-interval">Send Interval (seconds):</label>
+                            <input type="number" id="send-interval" min="0.1" max="10" step="0.1" value="0.5">
+                        </div>
+                        <div class="button-group">
+                            <button id="start-tracking" class="primary-button">Start Tracking</button>
+                            <button id="toggle-landmarks">Show Landmark IDs</button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-buttons">
+                        <button id="save-config">Save Configuration</button>
+                        <button id="load-config">Load Configuration</button>
+                        <input type="file" id="config-file-input" accept=".json" style="display: none;">
+                    </div>
+                    
+                    <div class="performance-info">
+                        <span>FPS: <span id="fps-counter">0</span></span>
                     </div>
                 </div>
-                <div class="input-group">
-                    <label for="min-change">Minimum Change to Update:</label>
-                    <input type="number" id="min-change" min="0" max="100" value="2">
+                
+                <!-- Formulas Tab -->
+                <div class="tab-content" id="formulas-tab">
+                    <div class="servo-formulas">
+                        <h2>Servo Control Formulas</h2>
+                        <div class="formula-container" id="formula-container">
+                            <!-- Will be populated by JavaScript based on CONFIG.SERVOS -->
+                        </div>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="send-interval">Send Interval (seconds):</label>
-                    <input type="number" id="send-interval" min="0.1" max="10" step="0.1" value="0.5">
+                
+                <!-- Monitoring Tab -->
+                <div class="tab-content" id="monitoring-tab">
+                    <div class="servo-values">
+                        <h2>Servo Values</h2>
+                        <div class="servo-tables">
+                            <div class="calculated-values">
+                                <h3>Calculated Values</h3>
+                                <table id="calculated-values-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Servo ID</th>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="sent-values">
+                                <h3>Last Sent Values</h3>
+                                <table id="sent-values-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Servo ID</th>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="button-group">
-                    <button id="start-tracking" class="primary-button">Start Tracking</button>
-                    <button id="toggle-landmarks">Show Landmark IDs</button>
-                </div>
-            </div>
-
-            <div class="servo-formulas">
-                <h2>Servo Control Formulas</h2>
-                <div class="formula-container" id="formula-container">
-                    <!-- Will be populated by JavaScript based on CONFIG.SERVOS -->
-                </div>
-            </div>
-
-            <div class="config-buttons">
-                <button id="save-config">Save Configuration</button>
-                <button id="load-config">Load Configuration</button>
-                <input type="file" id="config-file-input" accept=".json" style="display: none;">
-            </div>
-
-            <div class="status-panel">
-                <h2>Status</h2>
-                <div id="status-messages" class="status-messages"></div>
-                <div class="performance-info">
-                    <span>FPS: <span id="fps-counter">0</span></span>
-                </div>
-            </div>
-
-            <div class="servo-values">
-                <h2>Servo Values</h2>
-                <div class="servo-tables">
-                    <div class="calculated-values">
-                        <h3>Calculated Values</h3>
-                        <table id="calculated-values-table">
+                
+                <!-- Robot Status Tab -->
+                <div class="tab-content" id="robot-status-tab">
+                    <div class="robot-status">
+                        <h2>Robot Hand Status</h2>
+                        <table id="robot-status-table">
                             <thead>
                                 <tr>
-                                    <th>Servo ID</th>
-                                    <th>Name</th>
-                                    <th>Value</th>
+                                    <th>ID</th>
+                                    <th>Position</th>
+                                    <th>Temp</th>
+                                    <th>Load</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -84,41 +136,15 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="sent-values">
-                        <h3>Last Sent Values</h3>
-                        <table id="sent-values-table">
-                            <thead>
-                                <tr>
-                                    <th>Servo ID</th>
-                                    <th>Name</th>
-                                    <th>Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Will be populated by JavaScript -->
-                            </tbody>
-                        </table>
+                </div>
+                
+                <!-- Status Tab -->
+                <div class="tab-content" id="status-tab">
+                    <div class="status-panel">
+                        <h2>Status Messages</h2>
+                        <div id="status-messages" class="status-messages"></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="robot-status">
-                <h2>Robot Hand Status</h2>
-                <table id="robot-status-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Position</th>
-                            <th>Temp</th>
-                            <th>Load</th>
-                            <th>Min</th>
-                            <th>Max</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Will be populated by JavaScript -->
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>

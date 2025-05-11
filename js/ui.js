@@ -40,6 +40,29 @@ const UI = (function() {
         
         // Generate formula inputs based on CONFIG.SERVOS
         generateFormulaInputs();
+        
+        // Initialize tabs
+        initTabs();
+    }
+    
+    // Initialize tab functionality
+    function initTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Deactivate all tabs
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Activate selected tab
+                button.classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+            });
+        });
     }
     
     // Generate formula inputs based on CONFIG.SERVOS

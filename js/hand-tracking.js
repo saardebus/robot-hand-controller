@@ -161,8 +161,9 @@ const HandTracking = (function() {
                 // We need to convert them to the format expected by our application
                 // HandPose returns an array of 21 landmarks with x, y, z coordinates
                 return prediction.landmarks.map((landmark, index) => {
+                    // Mirror the x-coordinate to match the mirrored video display
                     return {
-                        x: landmark[0] / webcamElement.width,
+                        x: 1.0 - (landmark[0] / webcamElement.width), // Mirror the x-coordinate
                         y: landmark[1] / webcamElement.height,
                         z: landmark[2],
                         name: getLandmarkName(index)
@@ -239,7 +240,8 @@ const HandTracking = (function() {
             if (showLandmarkIds) {
                 canvasCtx.fillStyle = CONFIG.COLORS.LANDMARK_IDS;
                 canvasCtx.font = '12px Arial';
-                canvasCtx.fillText(index.toString(), x + 10, y);
+                // Position the ID text on the correct side in the mirrored view
+                canvasCtx.fillText(index.toString(), x - 20, y);
                 canvasCtx.fillStyle = CONFIG.COLORS.LANDMARKS;
             }
         });

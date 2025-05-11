@@ -22,6 +22,7 @@ const HandTracking = (function() {
     let noHandMessageElement = null;
     let handDetected = false;
     let animationFrameId = null;
+    let handToTrack = CONFIG.HAND_TRACKING.DEFAULT_HAND; // "left" or "right"
     
     // Callbacks
     let onLandmarksUpdateCallback = null;
@@ -129,6 +130,28 @@ const HandTracking = (function() {
         }
     }
     
+    // Determine if a hand is left or right
+    function determineHandType(landmarks) {
+        if (!landmarks || landmarks.length < 21) {
+            return null;
+        }
+        
+        // Use the relative positions of the thumb and pinky to determine hand type
+        // In a mirrored view, for a right hand, the thumb (landmark 4) will be to the right of the pinky (landmark 20)
+        // For a left hand, the thumb will be to the left of the pinky
+        const thumbTip = landmarks[4];
+        const pinkyTip = landmarks[20];
+        
+        // In the mirrored view, x is already flipped, so we need to interpret accordingly
+        // If thumb x is less than pinky x in the mirrored view, it's a right hand
+        // If thumb x is greater than pinky x in the mirrored view, it's a left hand
+        if (thumbTip.x < pinkyTip.x) {
+            return "right";
+        } else {
+            return "left";
+        }
+    }
+    
     // Detect hand landmarks in the current video frame
     async function detectLandmarks() {
         if (!model || !webcamElement.readyState === 4) {
@@ -141,26 +164,28 @@ const HandTracking = (function() {
             
             // Update hand detection status
             const wasHandDetected = handDetected;
-            handDetected = predictions.length > 0;
             
-            // Notify if hand detection status changed
-            if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
-                onHandDetectionChangeCallback(handDetected);
-            }
-            
-            // Show/hide no hand message
-            if (noHandMessageElement) {
-                noHandMessageElement.style.display = handDetected ? 'none' : 'block';
-            }
-            
-            // If a hand is detected, convert the landmarks to the format expected by our application
-            if (predictions.length > 0) {
-                const prediction = predictions[0]; // Get the first hand
+            // If no hands detected
+            if (predictions.length === 0) {
+                handDetected = false;
                 
-                // HandPose model returns landmarks in a different format than MediaPipe Hands
-                // We need to convert them to the format expected by our application
-                // HandPose returns an array of 21 landmarks with x, y, z coordinates
-                return prediction.landmarks.map((landmark, index) => {
+                // Notify if hand detection status changed
+                if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
+                    onHandDetectionChangeCallback(handDetected);
+                }
+                
+                // Show no hand message
+                if (noHandMessageElement) {
+                    noHandMessageElement.style.display = 'block';
+                }
+                
+                return null;
+            }
+            
+            // Process detected hands
+            for (const prediction of predictions) {
+                // Convert landmarks to our format
+                const landmarks = prediction.landmarks.map((landmark, index) => {
                     // Mirror the x-coordinate to match the mirrored video display
                     return {
                         x: 1.0 - (landmark[0] / webcamElement.width), // Mirror the x-coordinate
@@ -169,6 +194,40 @@ const HandTracking = (function() {
                         name: getLandmarkName(index)
                     };
                 });
+                
+                // Determine if this is a left or right hand
+                const detectedHandType = determineHandType(landmarks);
+                
+                // If this is the hand type we want to track
+                if (detectedHandType === handToTrack) {
+                    handDetected = true;
+                    
+                    // Notify if hand detection status changed
+                    if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
+                        onHandDetectionChangeCallback(handDetected);
+                    }
+                    
+                    // Hide no hand message
+                    if (noHandMessageElement) {
+                        noHandMessageElement.style.display = 'none';
+                    }
+                    
+                    return landmarks;
+                }
+            }
+            
+            // If we get here, we didn't find the hand type we're looking for
+            handDetected = false;
+            
+            // Notify if hand detection status changed
+            if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
+                onHandDetectionChangeCallback(handDetected);
+            }
+            
+            // Show no hand message with specific text
+            if (noHandMessageElement) {
+                noHandMessageElement.style.display = 'block';
+                noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
             }
             
             return null;
@@ -456,6 +515,34 @@ const HandTracking = (function() {
          */
         isHandDetected: function() {
             return handDetected;
+        },
+        
+        /**
+         * Set which hand to track (left or right)
+         * @param {string} hand - The hand to track ("left" or "right")
+         */
+        setHandToTrack: function(hand) {
+            console.log('HandTracking.setHandToTrack called with:', hand);
+            if (hand === "left" || hand === "right") {
+                handToTrack = hand;
+                console.log('handToTrack updated to:', handToTrack);
+                
+                // Update no hand message if it's visible
+                if (noHandMessageElement && noHandMessageElement.style.display === 'block') {
+                    noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
+                    console.log('Updated no hand message to:', noHandMessageElement.textContent);
+                }
+            } else {
+                console.error('Invalid hand value:', hand);
+            }
+        },
+        
+        /**
+         * Get which hand is currently being tracked
+         * @returns {string} The hand being tracked ("left" or "right")
+         */
+        getHandToTrack: function() {
+            return handToTrack;
         }
     };
 })();

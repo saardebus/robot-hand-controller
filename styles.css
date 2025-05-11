@@ -257,6 +257,25 @@ canvas {
     margin-left: 10px;
 }
 
+/* Hand Selection Buttons */
+.hand-select-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.hand-button {
+    flex: 1;
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.hand-button.active {
+    background-color: #3498db;
+    color: white;
+    border-color: #2980b9;
+}
+
 #connection-indicator.connected {
     background-color: #2ecc71; /* Green when connected */
 }

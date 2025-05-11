@@ -18,6 +18,7 @@ const UI = (function() {
     let robotIpInput = null;
     let minChangeInput = null;
     let sendIntervalInput = null;
+    let handSelectInput = null;
     let formulaInputs = {};
     let showingLandmarkIds = false;
     
@@ -38,6 +39,10 @@ const UI = (function() {
         minChangeInput = document.getElementById('min-change');
         sendIntervalInput = document.getElementById('send-interval');
         
+        // Hand selection buttons
+        rightHandButton = document.getElementById('right-hand-btn');
+        leftHandButton = document.getElementById('left-hand-btn');
+        
         // Generate formula inputs based on CONFIG.SERVOS
         generateFormulaInputs();
         
@@ -53,6 +58,7 @@ const UI = (function() {
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tabName = button.getAttribute('data-tab');
+                console.log('Tab clicked:', tabName);
                 
                 // Deactivate all tabs
                 tabButtons.forEach(btn => btn.classList.remove('active'));
@@ -60,7 +66,19 @@ const UI = (function() {
                 
                 // Activate selected tab
                 button.classList.add('active');
-                document.getElementById(`${tabName}-tab`).classList.add('active');
+                const tabContent = document.getElementById(`${tabName}-tab`);
+                if (tabContent) {
+                    tabContent.classList.add('active');
+                    console.log(`Activated tab: ${tabName}-tab`);
+                    
+                    // If this is the status tab, make sure messages are visible
+                    if (tabName === 'status' && statusMessagesElement) {
+                        console.log('Status tab activated, scrolling messages into view');
+                        statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+                    }
+                } else {
+                    console.error(`Tab content not found: ${tabName}-tab`);
+                }
             });
         });
     }
@@ -132,6 +150,55 @@ const UI = (function() {
             });
         }
         
+        // Hand selection buttons
+        if (rightHandButton && leftHandButton) {
+            // Right hand button
+            rightHandButton.addEventListener('click', function() {
+                console.log('Right hand button clicked');
+                // Update active state
+                rightHandButton.classList.add('active');
+                leftHandButton.classList.remove('active');
+                // Set hand to track
+                HandTracking.setHandToTrack('right');
+                // Add status message directly
+                if (statusMessagesElement) {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('status-message');
+                    messageElement.classList.add('info');
+                    
+                    const timestamp = new Date().toLocaleTimeString();
+                    messageElement.textContent = `[${timestamp}] Now tracking right hand`;
+                    
+                    statusMessagesElement.appendChild(messageElement);
+                    statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+                }
+                UI.showStatus('Now tracking right hand', 'info');
+            });
+            
+            // Left hand button
+            leftHandButton.addEventListener('click', function() {
+                console.log('Left hand button clicked');
+                // Update active state
+                leftHandButton.classList.add('active');
+                rightHandButton.classList.remove('active');
+                // Set hand to track
+                HandTracking.setHandToTrack('left');
+                // Add status message directly
+                if (statusMessagesElement) {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('status-message');
+                    messageElement.classList.add('info');
+                    
+                    const timestamp = new Date().toLocaleTimeString();
+                    messageElement.textContent = `[${timestamp}] Now tracking left hand`;
+                    
+                    statusMessagesElement.appendChild(messageElement);
+                    statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+                }
+                UI.showStatus('Now tracking left hand', 'info');
+            });
+        }
+        
         // Toggle landmarks button
         if (toggleLandmarksButton) {
             toggleLandmarksButton.addEventListener('click', function() {
@@ -171,6 +238,16 @@ const UI = (function() {
                     ServoControl.updateSendInterval(value);
                     UI.showStatus(`Send interval updated to ${value} seconds`, 'info');
                 }
+            });
+        }
+        
+        // Hand selection dropdown
+        if (handSelectInput) {
+            handSelectInput.addEventListener('change', function() {
+                const handToTrack = handSelectInput.value;
+                console.log('Hand selection changed to:', handToTrack);
+                HandTracking.setHandToTrack(handToTrack);
+                UI.showStatus(`Now tracking ${handToTrack} hand`, 'info');
             });
         }
         
@@ -400,6 +477,7 @@ const UI = (function() {
             robotIp: ServoControl.getRobotIp(),
             minChangeThreshold: ServoControl.getMinChangeThreshold(),
             sendInterval: ServoControl.getSendInterval(),
+            handToTrack: HandTracking.getHandToTrack(),
             formulas: ServoControl.getFormulas()
         };
         
@@ -450,6 +528,22 @@ const UI = (function() {
                     ServoControl.updateSendInterval(config.sendInterval);
                 }
                 
+                // Update hand to track
+                if (config.handToTrack) {
+                    HandTracking.setHandToTrack(config.handToTrack);
+                    
+                    // Update hand selection buttons
+                    if (rightHandButton && leftHandButton) {
+                        if (config.handToTrack === 'right') {
+                            rightHandButton.classList.add('active');
+                            leftHandButton.classList.remove('active');
+                        } else if (config.handToTrack === 'left') {
+                            leftHandButton.classList.add('active');
+                            rightHandButton.classList.remove('active');
+                        }
+                    }
+                }
+                
                 // Update formulas
                 if (config.formulas) {
                     ServoControl.setFormulas(config.formulas);
@@ -498,6 +592,17 @@ const UI = (function() {
                 sendIntervalInput.value = CONFIG.DEFAULT_SEND_INTERVAL;
             }
             
+            // Add direct event listener to hand selection dropdown
+            if (handSelectInput) {
+                console.log('Adding direct event listener to hand selection dropdown');
+                handSelectInput.addEventListener('change', function(event) {
+                    console.log('Direct hand selection change event triggered');
+                    console.log('Selected value:', event.target.value);
+                    HandTracking.setHandToTrack(event.target.value);
+                    UI.showStatus(`Now tracking ${event.target.value} hand`, 'info');
+                });
+            }
+            
             // Initialize calculated values table
             updateCalculatedValuesTable({});
             
@@ -512,6 +617,8 @@ const UI = (function() {
          */
         showStatus: function(message, type = 'info') {
             if (!statusMessagesElement) {
+                console.warn('Status messages element not found');
+                console.log(`[${type.toUpperCase()}] ${message}`);
                 return;
             }
             
@@ -526,6 +633,11 @@ const UI = (function() {
             statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
             
             console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            // Make sure the message is visible by scrolling to it
+            setTimeout(() => {
+                statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+            }, 10);
         },
         
         /**

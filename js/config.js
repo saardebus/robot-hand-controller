@@ -2,19 +2,24 @@
  * Configuration and constants for the Robot Hand Control application
  */
 const CONFIG = {
+    // Hand tracking options
+    HAND_TRACKING: {
+        DEFAULT_HAND: "right", // Default hand to track: "left" or "right"
+    },
+    
     // Servo definitions
     SERVOS: [
-        { id: 0, name: "Thumb Flexion/Extension" },
-        { id: 1, name: "Thumb Lateral Movement" },
-        { id: 2, name: "Index Finger Flexion/Extension" },
-        { id: 3, name: "Index Finger Adduction" },
-        { id: 4, name: "Middle Finger Flexion/Extension" },
-        { id: 5, name: "Ring Finger Flexion/Extension" },
-        { id: 6, name: "Ring Finger Adduction" },
-        { id: 7, name: "Pinky Finger Flexion/Extension" },
-        { id: 8, name: "Pinky Finger Adduction" },
-        { id: 9, name: "Wrist Flexion/Extension" },
-        { id: 10, name: "Forearm Pronation/Supination" }
+        { id: 1, name: "Thumb Flexion/Extension" },
+        { id: 2, name: "Thumb Lateral Movement" },
+        { id: 3, name: "Index Finger Flexion/Extension" },
+        { id: 4, name: "Index Finger Adduction" },
+        { id: 5, name: "Middle Finger Flexion/Extension" },
+        { id: 6, name: "Ring Finger Flexion/Extension" },
+        { id: 7, name: "Ring Finger Adduction" },
+        { id: 8, name: "Pinky Finger Flexion/Extension" },
+        { id: 9, name: "Pinky Finger Adduction" },
+        { id: 10, name: "Wrist Flexion/Extension" },
+        { id: 11, name: "Forearm Pronation/Supination" }
     ],
     
     // Hand landmark connections for drawing

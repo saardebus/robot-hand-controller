@@ -4,9 +4,10 @@
 const CONFIG = {
     // Hand tracking options
     HAND_TRACKING: {
-        DEFAULT_HAND: "right", // Default hand to track: "left" or "right"
+        DEFAULT_HAND: "right", // Default hand to track: "left", "right", or "both"
+        MAX_HANDS: 2, // Maximum number of hands to track
     },
-    
+
     // Servo definitions
     SERVOS: [
         { id: 1, name: "Thumb Flexor" },
@@ -21,7 +22,7 @@ const CONFIG = {
         { id: 10, name: "Wrist Flexor" },
         { id: 11, name: "Wrist Rotator" }
     ],
-    
+
     // Hand landmark connections for drawing
     HAND_CONNECTIONS: [
         // Thumb
@@ -35,23 +36,23 @@ const CONFIG = {
         // Pinky
         [0, 17], [17, 18], [18, 19], [19, 20],
         // Palm
-        [5, 9], [9, 13], [13, 17]
+        [5, 9], [9, 13], [13, 17], [5, 1], [5, 2]
     ],
-    
+
     // Default values
-    DEFAULT_MIN_CHANGE: 2,
-    DEFAULT_SEND_INTERVAL: 0.5, // seconds
-    
+    DEFAULT_MIN_CHANGE: 3,
+    DEFAULT_SEND_INTERVAL: 0.4, // seconds
+
     // API endpoints
     API_ENDPOINT: "/api/servos",
-    
+
     // Servo value range
     MIN_SERVO_VALUE: 0,
     MAX_SERVO_VALUE: 1023,
-    
+
     // Robot status update interval
     ROBOT_STATUS_UPDATE_INTERVAL: 2000, // ms
-    
+
     // Colors for landmark visualization
     COLORS: {
         LANDMARKS: "rgba(35, 168, 46, 0.8)",
@@ -60,3 +61,4 @@ const CONFIG = {
     }
 };
 
+export default CONFIG;

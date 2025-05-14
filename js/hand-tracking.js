@@ -4,10 +4,12 @@
  * Handles webcam initialization, hand detection model loading,
  * and processing video frames to detect hand landmarks.
  */
+import CONFIG from './config.js';
+import { FilesetResolver, HandLandmarker } from '../lib/vision_bundle.js'
 
-const HandTracking = (function() {
+const HandTracking = (() => {
     // Private variables
-    let model = null;
+    let detector = null;
     let webcamElement = null;
     let canvasElement = null;
     let canvasCtx = null;
@@ -21,30 +23,34 @@ const HandTracking = (function() {
     let handDetected = false;
     let animationFrameId = null;
     let handToTrack = CONFIG.HAND_TRACKING.DEFAULT_HAND; // "left" or "right"
-    
+    let detectedHands = {
+        left: null,
+        right: null
+    };
+
     // Callbacks
     let onLandmarksUpdateCallback = null;
     let onHandDetectionChangeCallback = null;
-    
+
     // Initialize the webcam and canvas
     async function setupCamera() {
         if (!webcamElement) {
             throw new Error('Webcam element not set');
         }
-        
+
         // Get available video devices
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
+
         // If no video devices found, throw error
         if (videoDevices.length === 0) {
             throw new Error('No video input devices found');
         }
-        
+
         // Get selected device ID from dropdown or use first available
         const videoSelect = document.getElementById('camera-select');
         const selectedDeviceId = videoSelect.value || videoDevices[0].deviceId;
-        
+
         // Set up video constraints
         const constraints = {
             video: {
@@ -53,23 +59,23 @@ const HandTracking = (function() {
                 height: { ideal: 480 }
             }
         };
-        
+
         // Get user media
         try {
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             webcamElement.srcObject = stream;
-            
+
             return new Promise((resolve) => {
                 webcamElement.onloadedmetadata = () => {
                     videoWidth = webcamElement.videoWidth;
                     videoHeight = webcamElement.videoHeight;
                     webcamElement.width = videoWidth;
                     webcamElement.height = videoHeight;
-                    
+
                     // Set canvas dimensions to match video
                     canvasElement.width = videoWidth;
                     canvasElement.height = videoHeight;
-                    
+
                     resolve(videoWidth, videoHeight);
                 };
             });
@@ -77,44 +83,35 @@ const HandTracking = (function() {
             throw new Error(`Error accessing webcam: ${error.message}`);
         }
     }
-    
+
     // Load the hand detection model
     async function loadModel() {
         try {
             console.log('Starting model loading process...');
-            
-            // First, make sure TensorFlow.js is loaded
-            if (typeof tf === 'undefined') {
-                throw new Error('TensorFlow.js is not loaded');
-            }
-            console.log('TensorFlow.js is loaded');
-            
-            // Check if handpose is available
-            if (typeof handpose === 'undefined') {
-                throw new Error('HandPose library is not loaded. Check the console for 404 errors.');
-            }
-            console.log('HandPose library is loaded');
-            
-            // Check if the global handposeModel is available
-            if (typeof loadHandposeModel !== 'function') {
-                console.log('Using direct handpose.load() instead of global loadHandposeModel()');
-                // Try loading directly from the handpose object
-                console.log('Loading HandPose model directly...');
-                model = await handpose.load();
-            } else {
-                // Load the HandPose model using the global function
-                console.log('Loading HandPose model via global function...');
-                model = await loadHandposeModel();
-            }
-            
-            console.log('HandPose model loaded successfully!');
-            return model;
+
+            const vision = await FilesetResolver.forVisionTasks("./lib/wasm/");
+
+            const landMarker = await HandLandmarker.createFromOptions(
+                vision,
+                {
+                    baseOptions: {
+                        modelAssetPath: "./lib/model/hand_landmarker.task",
+                        delegate: "GPU"
+                    },
+                    numHands: 2
+                }
+            );
+
+            console.log('Hand Pose Detection model loaded successfully!');
+
+            detector = landMarker;
+            return detector;
         } catch (error) {
             console.error('Error loading hand detection model:', error);
             if (error.stack) {
                 console.error('Error stack:', error.stack);
             }
-            
+
             // More detailed error information
             if (error.message && error.message.includes('404')) {
                 console.error('A 404 error occurred. This likely means a required model file could not be found.');
@@ -122,150 +119,148 @@ const HandTracking = (function() {
             } else {
                 console.error(`Error loading model: ${error.message}`);
             }
-            
+
             throw new Error(`Error loading hand detection model: ${error.message}`);
         }
     }
-    
-    // Determine if a hand is left or right
-    function determineHandType(landmarks) {
-        if (!landmarks || landmarks.length < 21) {
+
+    // Convert MediaPipe hand landmarks to our format
+    function convertLandmarks(hand) {
+        if (!hand || !hand.keypoints || !hand.keypoints3D) {
             return null;
         }
-        
-        // Use the relative positions of the thumb and pinky to determine hand type
-        // In a mirrored view, for a right hand, the thumb (landmark 4) will be to the right of the pinky (landmark 20)
-        // For a left hand, the thumb will be to the left of the pinky
-        const thumbTip = landmarks[4];
-        const pinkyTip = landmarks[20];
-        
-        // In the mirrored view, x is already flipped, so we need to interpret accordingly
-        // If thumb x is less than pinky x in the mirrored view, it's a right hand
-        // If thumb x is greater than pinky x in the mirrored view, it's a left hand
-        if (thumbTip.x < pinkyTip.x) {
-            return "right";
-        } else {
-            return "left";
-        }
+
+        // Create landmarks array with both 2D and 3D data
+        return hand.keypoints.map((keypoint2D, index) => {
+            const keypoint3D = hand.keypoints3D[index];
+
+            // Mirror the x-coordinate to match the mirrored video display
+            return {
+                // 2D coordinates for drawing (normalized to 0-1)
+                x: 1 - keypoint2D.x,
+                y: keypoint2D.y,
+                z: keypoint2D.z,
+                // 3D coordinates for distance calculations
+                x3D: keypoint3D.x,
+                y3D: keypoint3D.y,
+                z3D: keypoint3D.z,
+            };
+        });
     }
-    
+
     // Detect hand landmarks in the current video frame
     async function detectLandmarks() {
-        if (!model || !webcamElement.readyState === 4) {
+        if (!detector || !webcamElement.readyState === 4) {
             return null;
         }
-        
+
         try {
-            // Detect hands using the HandPose model
-            const predictions = await model.estimateHands(webcamElement);
-            
+            const detection = await detector.detect(webcamElement);
+
             // Update hand detection status
             const wasHandDetected = handDetected;
-            
+
             // If no hands detected
-            if (predictions.length === 0) {
+            if (detection.landmarks.length === 0) {
                 handDetected = false;
-                
+
                 // Notify if hand detection status changed
                 if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
                     onHandDetectionChangeCallback(handDetected);
                 }
-                
+
                 // Show no hand message
                 if (noHandMessageElement) {
                     noHandMessageElement.style.display = 'block';
+                    noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
                 }
-                
+
                 return null;
             }
-            
+
+            let foundHand = -1
+
             // Process detected hands
-            for (const prediction of predictions) {
-                // Convert landmarks to our format
-                const landmarks = prediction.landmarks.map((landmark, index) => {
-                    // Mirror the x-coordinate to match the mirrored video display
-                    return {
-                        x: 1.0 - (landmark[0] / webcamElement.width), // Mirror the x-coordinate
-                        y: landmark[1] / webcamElement.height,
-                        z: landmark[2],
-                        name: getLandmarkName(index)
-                    };
-                });
-                
-                // Determine if this is a left or right hand
-                const detectedHandType = determineHandType(landmarks);
-                
-                // If this is the hand type we want to track
-                if (detectedHandType === handToTrack) {
-                    handDetected = true;
-                    
-                    // Notify if hand detection status changed
-                    if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
-                        onHandDetectionChangeCallback(handDetected);
+            for (const [i, hand] of detection.handednesses.entries()) {
+                try {
+                    if (hand[0].categoryName.toLowerCase() === handToTrack) {
+                        foundHand = i;
+                        break;
                     }
-                    
-                    // Hide no hand message
-                    if (noHandMessageElement) {
-                        noHandMessageElement.style.display = 'none';
-                    }
-                    
-                    return landmarks;
+                } catch (error) {
+                    console.error('Error processing hand data:', error);
                 }
             }
-            
-            // If we get here, we didn't find the hand type we're looking for
-            handDetected = false;
-            
+
+            // Determine if we have the hand we want to track
+            let trackedLandmarks = null;
+
+            // Check if the selected hand is detected
+            handDetected = foundHand != -1
+
+            if (handDetected) {
+                let hand = {
+                    keypoints: detection.landmarks[foundHand],
+                    keypoints3D: detection.worldLandmarks[foundHand]
+                }
+                trackedLandmarks = convertLandmarks(hand);
+            }
+
             // Notify if hand detection status changed
             if (wasHandDetected !== handDetected && onHandDetectionChangeCallback) {
                 onHandDetectionChangeCallback(handDetected);
             }
-            
-            // Show no hand message with specific text
+
+            // Update no hand message
             if (noHandMessageElement) {
-                noHandMessageElement.style.display = 'block';
-                noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
+                if (handDetected) {
+                    noHandMessageElement.style.display = 'none';
+                } else {
+                    noHandMessageElement.style.display = 'block';
+                    noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
+                }
             }
-            
-            return null;
+
+            return trackedLandmarks;
         } catch (error) {
             console.error('Error detecting landmarks:', error);
             return null;
         }
     }
-    
-    // Get the name of a landmark based on its index
-    function getLandmarkName(index) {
-        const landmarkNames = [
-            'wrist',
-            'thumb_cmc', 'thumb_mcp', 'thumb_ip', 'thumb_tip',
-            'index_mcp', 'index_pip', 'index_dip', 'index_tip',
-            'middle_mcp', 'middle_pip', 'middle_dip', 'middle_tip',
-            'ring_mcp', 'ring_pip', 'ring_dip', 'ring_tip',
-            'pinky_mcp', 'pinky_pip', 'pinky_dip', 'pinky_tip'
-        ];
-        
-        return landmarkNames[index] || `landmark_${index}`;
-    }
-    
+
     // Draw landmarks and connections on the canvas
     function drawLandmarks(landmarks) {
+        if (!canvasCtx) {
+            return;
+        }
+
+        // Clear the canvas
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // If no landmarks, return
+        if (!landmarks) {
+            return;
+        }
+
+        // Draw the selected hand
+        drawSingleHandLandmarks(landmarks, CONFIG.COLORS.LANDMARKS, CONFIG.COLORS.CONNECTIONS);
+    }
+
+    // Draw landmarks for a single hand
+    function drawSingleHandLandmarks(landmarks, landmarkColor, connectionColor) {
         if (!canvasCtx || !landmarks) {
             return;
         }
-        
-        // Clear the canvas
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
+
         // Draw connections first (so they appear behind landmarks)
-        canvasCtx.strokeStyle = CONFIG.COLORS.CONNECTIONS;
+        canvasCtx.strokeStyle = connectionColor;
         canvasCtx.lineWidth = 3;
-        
+
         for (const connection of CONFIG.HAND_CONNECTIONS) {
             const [startIdx, endIdx] = connection;
             const startPoint = landmarks[startIdx];
             const endPoint = landmarks[endIdx];
-            
+
             if (startPoint && endPoint) {
                 canvasCtx.beginPath();
                 canvasCtx.moveTo(
@@ -279,70 +274,70 @@ const HandTracking = (function() {
                 canvasCtx.stroke();
             }
         }
-        
+
         // Draw landmarks
-        canvasCtx.fillStyle = CONFIG.COLORS.LANDMARKS;
-        
+        canvasCtx.fillStyle = landmarkColor;
+
         landmarks.forEach((landmark, index) => {
             const x = landmark.x * canvasElement.width;
             const y = landmark.y * canvasElement.height;
-            
+
             // Draw landmark point
             canvasCtx.beginPath();
             canvasCtx.arc(x, y, 5, 0, 2 * Math.PI);
             canvasCtx.fill();
-            
+
             // Draw landmark ID if enabled
             if (showLandmarkIds) {
                 canvasCtx.fillStyle = CONFIG.COLORS.LANDMARK_IDS;
                 canvasCtx.font = '12px Arial';
                 // Position the ID text on the correct side in the mirrored view
                 canvasCtx.fillText(index.toString(), x - 20, y);
-                canvasCtx.fillStyle = CONFIG.COLORS.LANDMARKS;
+                canvasCtx.fillStyle = landmarkColor;
             }
         });
     }
-    
+
     // Main detection loop
     async function detectionLoop(timestamp) {
         if (!isTracking) {
             return;
         }
-        
+
         lastFrameTime = timestamp;
-        
+
         // Detect landmarks
         const landmarks = await detectLandmarks();
-        
+
         // Draw landmarks on canvas
         drawLandmarks(landmarks);
-        
+
         // Notify about landmarks update
         if (landmarks && onLandmarksUpdateCallback) {
             onLandmarksUpdateCallback(landmarks);
         }
-        
+
         // Continue the detection loop
         animationFrameId = requestAnimationFrame(detectionLoop);
     }
-    
+
     // Populate camera select dropdown
     async function populateCameraSelect() {
         const videoSelect = document.getElementById('camera-select');
-        
+
         if (!videoSelect) {
             return;
         }
-        
+
         // Clear existing options
         while (videoSelect.firstChild) {
             videoSelect.removeChild(videoSelect.firstChild);
         }
-        
+
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            
+
             // Add options for each video device
             videoDevices.forEach((device, index) => {
                 const option = document.createElement('option');
@@ -350,7 +345,7 @@ const HandTracking = (function() {
                 option.text = device.label || `Camera ${index + 1}`;
                 videoSelect.appendChild(option);
             });
-            
+
             // Add change event listener
             videoSelect.addEventListener('change', async () => {
                 // Stop tracking if active
@@ -358,11 +353,11 @@ const HandTracking = (function() {
                 if (isTracking) {
                     await stopTracking();
                 }
-                
+
                 // Reinitialize camera with new device
                 try {
                     await setupCamera();
-                    
+
                     // Resume tracking if it was active
                     if (wasTracking) {
                         await startTracking();
@@ -377,7 +372,7 @@ const HandTracking = (function() {
             console.error(`Error listing cameras: ${error.message}`);
         }
     }
-    
+
     // Public API
     return {
         /**
@@ -387,117 +382,115 @@ const HandTracking = (function() {
          * @param {HTMLElement} noHandMessage - The element to show when no hand is detected
          * @returns {Promise} A promise that resolves when initialization is complete
          */
-        init: async function(video, canvas, noHandMessage) {
+        init: async function (video, canvas, noHandMessage) {
             webcamElement = video;
             canvasElement = canvas;
             canvasCtx = canvas.getContext('2d');
             noHandMessageElement = noHandMessage;
-            
+
             try {
                 // Populate camera select dropdown
                 await populateCameraSelect();
-                
+
                 // Set up camera
                 await setupCamera();
-                
+
                 // Load hand detection model
                 await loadModel();
-                
+
                 return true;
             } catch (error) {
                 throw new Error(`Hand tracking initialization failed: ${error.message}`);
             }
         },
-        
+
         /**
          * Start hand tracking
          * @returns {Promise} A promise that resolves when tracking starts
          */
-        startTracking: async function() {
+        startTracking: async function () {
             if (isTracking) {
                 return;
             }
-            
+
             isTracking = true;
             lastFrameTime = 0;
             frameCount = 0;
-            
+
             // Start detection loop
             animationFrameId = requestAnimationFrame(detectionLoop);
         },
-        
+
         /**
          * Stop hand tracking
          */
-        stopTracking: function() {
+        stopTracking: function () {
             isTracking = false;
-            
+
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
-            
+
             // Clear canvas
             if (canvasCtx) {
                 canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             }
-            
+
             // Hide no hand message
             if (noHandMessageElement) {
                 noHandMessageElement.style.display = 'none';
             }
         },
-        
+
         /**
          * Toggle display of landmark IDs
          * @param {boolean} show - Whether to show landmark IDs
          */
-        toggleLandmarkIds: function(show) {
+        toggleLandmarkIds: function (show) {
             showLandmarkIds = show;
         },
-        
+
         /**
          * Set callback for landmarks update
          * @param {Function} callback - Function to call when landmarks are updated
          */
-        onLandmarksUpdate: function(callback) {
+        onLandmarksUpdate: function (callback) {
             onLandmarksUpdateCallback = callback;
         },
-        
+
         /**
          * Set callback for hand detection change
          * @param {Function} callback - Function to call when hand detection status changes
          */
-        onHandDetectionChange: function(callback) {
+        onHandDetectionChange: function (callback) {
             onHandDetectionChangeCallback = callback;
         },
-        
+
         /**
          * Check if tracking is active
          * @returns {boolean} True if tracking is active, false otherwise
          */
-        isTracking: function() {
+        isTracking: function () {
             return isTracking;
         },
-        
+
         /**
          * Check if a hand is currently detected
          * @returns {boolean} True if a hand is detected, false otherwise
          */
-        isHandDetected: function() {
+        isHandDetected: function () {
             return handDetected;
         },
-        
+
         /**
          * Set which hand to track (left or right)
          * @param {string} hand - The hand to track ("left" or "right")
          */
-        setHandToTrack: function(hand) {
-            console.log('HandTracking.setHandToTrack called with:', hand);
+        setHandToTrack: function (hand) {
             if (hand === "left" || hand === "right") {
                 handToTrack = hand;
-                console.log('handToTrack updated to:', handToTrack);
-                
+
                 // Update no hand message if it's visible
                 if (noHandMessageElement && noHandMessageElement.style.display === 'block') {
                     noHandMessageElement.textContent = `No ${handToTrack} hand detected`;
@@ -507,14 +500,23 @@ const HandTracking = (function() {
                 console.error('Invalid hand value:', hand);
             }
         },
-        
+
         /**
          * Get which hand is currently being tracked
-         * @returns {string} The hand being tracked ("left" or "right")
+         * @returns {string} The hand being tracked ("left", "right", or "both")
          */
-        getHandToTrack: function() {
+        getHandToTrack: function () {
             return handToTrack;
+        },
+
+        /**
+         * Get detected hands data
+         * @returns {Object} Object containing detected hands data
+         */
+        getDetectedHands: function () {
+            return detectedHands;
         }
     };
 })();
 
+export default HandTracking;

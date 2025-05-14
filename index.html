@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Hand Control</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <div class="video-panel">
@@ -29,7 +31,7 @@
                     <button class="tab-button" data-tab="robot-status">Robot Status</button>
                     <button class="tab-button" data-tab="status">Status</button>
                 </div>
-                
+
                 <!-- Control Tab -->
                 <div class="tab-content active" id="control-tab">
                     <div class="connection-settings">
@@ -61,14 +63,14 @@
                             <button id="toggle-landmarks">Show Landmark IDs</button>
                         </div>
                     </div>
-                    
+
                     <div class="config-buttons">
                         <button id="save-config">Save Configuration</button>
                         <button id="load-config">Load Configuration</button>
                         <input type="file" id="config-file-input" accept=".json" style="display: none;">
                     </div>
                 </div>
-                
+
                 <!-- Formulas Tab -->
                 <div class="tab-content" id="formulas-tab">
                     <div class="servo-formulas">
@@ -78,7 +80,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Monitoring Tab -->
                 <div class="tab-content" id="monitoring-tab">
                     <div class="servo-values">
@@ -117,7 +119,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Robot Status Tab -->
                 <div class="tab-content" id="robot-status-tab">
                     <div class="robot-status">
@@ -139,7 +141,7 @@
                         </table>
                     </div>
                 </div>
-                
+
                 <!-- Status Tab -->
                 <div class="tab-content" id="status-tab">
                     <div class="status-panel">
@@ -151,39 +153,7 @@
         </div>
     </div>
 
-    <!-- Load TensorFlow.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.19.0/dist/tf.min.js"></script>
-    
-    <!-- Load the TensorFlow.js HandPose model from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7/dist/handpose.min.js"></script>
-    
-    <!-- Load the TensorFlow.js HandPose model -->
-    <script>
-        // Create a global variable to store the model
-        let handposeModel;
-        
-        // Load the HandPose model
-        async function loadHandposeModel() {
-            try {
-                console.log('Loading TensorFlow.js HandPose model...');
-                // Load the model
-                handposeModel = await handpose.load();
-                console.log('HandPose model loaded successfully!');
-                return handposeModel;
-            } catch (error) {
-                console.error('Error loading HandPose model:', error);
-                throw error;
-            }
-        }
-    </script>
-
-    <!-- Application JavaScript -->
-    <script src="js/config.js"></script>
-    <script src="js/formula-parser.js"></script>
-    <script src="js/hand-tracking.js"></script>
-    <script src="js/servo-control.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
-</html>
 
+</html>

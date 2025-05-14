@@ -9,17 +9,17 @@ const CONFIG = {
     
     // Servo definitions
     SERVOS: [
-        { id: 1, name: "Thumb Flexion/Extension" },
-        { id: 2, name: "Thumb Lateral Movement" },
-        { id: 3, name: "Index Finger Flexion/Extension" },
-        { id: 4, name: "Index Finger Adduction" },
-        { id: 5, name: "Middle Finger Flexion/Extension" },
-        { id: 6, name: "Ring Finger Flexion/Extension" },
-        { id: 7, name: "Ring Finger Adduction" },
-        { id: 8, name: "Pinky Finger Flexion/Extension" },
-        { id: 9, name: "Pinky Finger Adduction" },
-        { id: 10, name: "Wrist Flexion/Extension" },
-        { id: 11, name: "Forearm Pronation/Supination" }
+        { id: 1, name: "Thumb Flexor" },
+        { id: 2, name: "Thumb Rotator" },
+        { id: 3, name: "Index Flexor" },
+        { id: 4, name: "Index Adductor" },
+        { id: 5, name: "Middle Flexor" },
+        { id: 6, name: "Ring Flexor" },
+        { id: 7, name: "Ring Adductor" },
+        { id: 8, name: "Pinky Flexor" },
+        { id: 9, name: "Pinky Adductor" },
+        { id: 10, name: "Wrist Flexor" },
+        { id: 11, name: "Wrist Rotator" }
     ],
     
     // Hand landmark connections for drawing
@@ -54,9 +54,9 @@ const CONFIG = {
     
     // Colors for landmark visualization
     COLORS: {
-        LANDMARKS: "rgba(0, 255, 0, 0.8)",
+        LANDMARKS: "rgba(35, 168, 46, 0.8)",
         LANDMARK_IDS: "white",
-        CONNECTIONS: "rgba(0, 255, 0, 0.5)"
+        CONNECTIONS: "rgba(35, 168, 46, 0.5)"
     }
 };
 

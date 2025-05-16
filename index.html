@@ -118,6 +118,29 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="historical-data">
+                        <h2>Historical Data</h2>
+                        <div class="graph-controls">
+                            <div class="input-group">
+                                <label for="history-time-range">Time Range (seconds):</label>
+                                <input type="number" id="history-time-range" min="1" max="300" value="10">
+                            </div>
+                            <div class="input-group">
+                                <label for="servo-select">Servo:</label>
+                                <select id="servo-select">
+                                    <!-- Will be populated by JavaScript based on CONFIG.SERVOS -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="graph-container">
+                            <canvas id="history-chart"></canvas>
+                        </div>
+                        <div class="min-max-values">
+                            <div class="min-value">Min: <span id="min-value">--</span></div>
+                            <div class="max-value">Max: <span id="max-value">--</span></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Robot Status Tab -->
@@ -140,6 +163,37 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <div class="robot-status-graphs">
+                        <h2>Status Graphs</h2>
+                        <div class="graph-controls">
+                            <div class="input-group">
+                                <label for="robot-status-time-range">Time Range (seconds):</label>
+                                <input type="number" id="robot-status-time-range" min="1" max="300" value="60">
+                            </div>
+                        </div>
+                        
+                        <div class="graph-section">
+                            <h3>Position</h3>
+                            <div class="graph-container">
+                                <canvas id="position-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="graph-section">
+                            <h3>Load</h3>
+                            <div class="graph-container">
+                                <canvas id="load-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="graph-section">
+                            <h3>Temperature</h3>
+                            <div class="graph-container">
+                                <canvas id="temperature-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Status Tab -->
@@ -155,5 +209,4 @@
 
     <script type="module" src="js/app.js"></script>
 </body>
-
 </html>

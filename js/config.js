@@ -10,15 +10,15 @@ const CONFIG = {
 
     // Servo definitions
     SERVOS: [
-        { id: 1, name: "Thumb Flexor" },
-        { id: 2, name: "Thumb Rotator" },
-        { id: 3, name: "Index Flexor" },
-        { id: 4, name: "Index Adductor" },
+        { id: 1, name: "Pink Adductor" },
+        { id: 2, name: "Pink Flexor" },
+        { id: 3, name: "Ring Adductor" },
+        { id: 4, name: "Ring Flexor" },
         { id: 5, name: "Middle Flexor" },
-        { id: 6, name: "Ring Flexor" },
-        { id: 7, name: "Ring Adductor" },
-        { id: 8, name: "Pinky Flexor" },
-        { id: 9, name: "Pinky Adductor" },
+        { id: 6, name: "Index Adductor" },
+        { id: 7, name: "Index Flexor" },
+        { id: 8, name: "Thumb Rotator" },
+        { id: 9, name: "Thumb Flexor" },
         { id: 10, name: "Wrist Flexor" },
         { id: 11, name: "Wrist Rotator" }
     ],

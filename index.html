@@ -118,7 +118,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="historical-data">
                         <h2>Historical Data</h2>
                         <div class="graph-controls">
@@ -163,7 +163,7 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="robot-status-graphs">
                         <h2>Status Graphs</h2>
                         <div class="graph-controls">
@@ -172,21 +172,21 @@
                                 <input type="number" id="robot-status-time-range" min="1" max="300" value="60">
                             </div>
                         </div>
-                        
+
                         <div class="graph-section">
                             <h3>Position</h3>
                             <div class="graph-container">
                                 <canvas id="position-chart"></canvas>
                             </div>
                         </div>
-                        
+
                         <div class="graph-section">
                             <h3>Load</h3>
                             <div class="graph-container">
                                 <canvas id="load-chart"></canvas>
                             </div>
                         </div>
-                        
+
                         <div class="graph-section">
                             <h3>Temperature</h3>
                             <div class="graph-container">
@@ -202,6 +202,10 @@
                         <h2>Status Messages</h2>
                         <div id="status-messages" class="status-messages"></div>
                     </div>
+                    <div class="hand-visualization-3d">
+                        <h2>Hand Landmarks 3D Visualization</h2>
+                        <div id="hand-visualization-container" class="visualization-container"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -209,4 +213,5 @@
 
     <script type="module" src="js/app.js"></script>
 </body>
+
 </html>

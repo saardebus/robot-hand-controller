@@ -12,9 +12,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Set up callbacks between modules
     function setupCallbacks() {
         try {
-            // Hand Tracking -> Servo Control
+            // Hand Tracking -> Servo Control & 3D Visualization
             HandTracking.onLandmarksUpdate(function (landmarks) {
                 ServoControl.processLandmarks(landmarks);
+                UI.update3DVisualization(landmarks);
             });
 
             HandTracking.onHandDetectionChange(function (detected) {

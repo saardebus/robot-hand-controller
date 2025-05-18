@@ -9,6 +9,7 @@ import FormulaParser from './formula-parser.js';
 import HandTracking from './hand-tracking.js';
 import ServoControl from './servo-control.js';
 import * as chart from '../lib/chart.js';
+import HandVisualization3D from './hand-visualization-3d.js';
 
 const UI = (() => {
     // Private variables
@@ -28,14 +29,14 @@ const UI = (() => {
     let formulaInputs = {};
     let showingLandmarkIds = false;
     let handVisualizationContainer = null;
-    
+
     // Historical data variables
     let historyChart = null;
     let historyTimeRange = 10; // Default 10 seconds
     let selectedServoId = null;
     let historicalData = {}; // Object to store historical data for each servo
     let historyUpdateInterval = null;
-    
+
     // Robot status graph variables
     let positionChart = null;
     let loadChart = null;
@@ -47,7 +48,7 @@ const UI = (() => {
         temperature: {} // Object to store temperature data for each servo
     };
     let robotStatusUpdateInterval = null;
- 
+
     // Initialize UI elements
     function initElements() {
         // Status elements
@@ -56,6 +57,7 @@ const UI = (() => {
         sentValuesTableElement = document.getElementById('sent-values-table').querySelector('tbody');
         robotStatusTableElement = document.getElementById('robot-status-table').querySelector('tbody');
         connectionIndicatorElement = document.getElementById('connection-indicator');
+        handVisualizationContainer = document.getElementById('hand-visualization-container');
 
         // Control elements
         startTrackingButton = document.getElementById('start-tracking');
@@ -73,29 +75,32 @@ const UI = (() => {
 
         // Initialize tabs
         initTabs();
-        
+
         // Initialize historical data elements
         initHistoricalDataElements();
-        
+
         // Initialize robot status graph elements
         initRobotStatusGraphElements();
+
+        // Initialize 3D hand visualization
+        initHandVisualization3D();
     }
-    
+
     // Initialize historical data elements
     function initHistoricalDataElements() {
         // Get elements
         const historyTimeRangeInput = document.getElementById('history-time-range');
         const servoSelect = document.getElementById('servo-select');
         const historyChartCanvas = document.getElementById('history-chart');
-        
+
         if (!historyTimeRangeInput || !servoSelect || !historyChartCanvas) {
             console.error('Historical data elements not found');
             return;
         }
-        
+
         // Set initial time range
         historyTimeRange = parseInt(historyTimeRangeInput.value, 10);
-        
+
         // Populate servo select dropdown
         servoSelect.innerHTML = '';
         CONFIG.SERVOS.forEach(servo => {
@@ -104,39 +109,39 @@ const UI = (() => {
             option.textContent = `${servo.name} (ID: ${servo.id})`;
             servoSelect.appendChild(option);
         });
-        
+
         // Set initial selected servo
         if (CONFIG.SERVOS.length > 0) {
             selectedServoId = CONFIG.SERVOS[0].id;
             servoSelect.value = selectedServoId;
         }
-        
+
         // Initialize empty historical data for each servo
         CONFIG.SERVOS.forEach(servo => {
             historicalData[servo.id] = [];
         });
-        
+
         // Initialize chart
         initHistoryChart(historyChartCanvas);
-        
+
         // Add event listeners
-        historyTimeRangeInput.addEventListener('change', function() {
+        historyTimeRangeInput.addEventListener('change', function () {
             historyTimeRange = parseInt(historyTimeRangeInput.value, 10);
             updateHistoryChart();
         });
-        
-        servoSelect.addEventListener('change', function() {
+
+        servoSelect.addEventListener('change', function () {
             selectedServoId = parseInt(servoSelect.value, 10);
             updateHistoryChart();
         });
     }
-    
+
     // Initialize history chart
     function initHistoryChart(canvas) {
         if (!canvas) {
             return;
         }
-        
+
         // Create chart
         historyChart = new Chart(canvas, {
             type: 'line',
@@ -185,95 +190,95 @@ const UI = (() => {
                 }
             }
         });
-        
+
         // Start history update interval
         startHistoryUpdateInterval();
     }
-    
+
     // Start history update interval
     function startHistoryUpdateInterval() {
         if (historyUpdateInterval) {
             clearInterval(historyUpdateInterval);
         }
-        
+
         // Update chart every second
         historyUpdateInterval = setInterval(updateHistoryChart, 1000);
     }
-    
+
     // Start robot status update interval
     function startRobotStatusUpdateInterval() {
         if (robotStatusUpdateInterval) {
             clearInterval(robotStatusUpdateInterval);
         }
-        
+
         // Update charts every second
         robotStatusUpdateInterval = setInterval(updateRobotStatusCharts, 1000);
     }
-    
+
     // Update history chart
     function updateHistoryChart() {
         if (!historyChart || !selectedServoId) {
             return;
         }
-        
+
         // Get data for selected servo
         const servoData = historicalData[selectedServoId] || [];
-        
+
         // Calculate time range in milliseconds
         const timeRangeMs = historyTimeRange * 1000;
-        
+
         // Filter data to only include points within the time range
         const now = Date.now();
         const filteredData = servoData.filter(point => (now - point.x) <= timeRangeMs);
-        
+
         // Format data for chart
         const labels = [];
         const values = [];
-        
+
         filteredData.forEach(point => {
             const date = new Date(point.x);
             labels.push(date.toLocaleTimeString());
             values.push(point.y);
         });
-        
+
         // Update chart data
         historyChart.data.labels = labels;
         historyChart.data.datasets[0].data = values;
-        
+
         // Update chart label with servo name
         const selectedServo = CONFIG.SERVOS.find(servo => servo.id === selectedServoId);
         if (selectedServo) {
             historyChart.data.datasets[0].label = `${selectedServo.name} (ID: ${selectedServoId})`;
         }
-        
+
         // Update chart
         historyChart.update();
-        
+
         // Update min/max values
         updateMinMaxValues(filteredData);
     }
-    
+
     // Update min/max values display
     function updateMinMaxValues(data) {
         const minValueElement = document.getElementById('min-value');
         const maxValueElement = document.getElementById('max-value');
-        
+
         if (!minValueElement || !maxValueElement || data.length === 0) {
             if (minValueElement) minValueElement.textContent = '--';
             if (maxValueElement) maxValueElement.textContent = '--';
             return;
         }
-        
+
         // Calculate min and max values
         const values = data.map(point => point.y);
         const minValue = Math.min(...values);
         const maxValue = Math.max(...values);
-        
+
         // Update display
         minValueElement.textContent = minValue;
         maxValueElement.textContent = maxValue;
     }
-    
+
     // Initialize robot status graph elements
     function initRobotStatusGraphElements() {
         // Get elements
@@ -281,49 +286,49 @@ const UI = (() => {
         const positionChartCanvas = document.getElementById('position-chart');
         const loadChartCanvas = document.getElementById('load-chart');
         const temperatureChartCanvas = document.getElementById('temperature-chart');
-        
+
         if (!robotStatusTimeRangeInput || !positionChartCanvas || !loadChartCanvas || !temperatureChartCanvas) {
             console.error('Robot status graph elements not found');
             return;
         }
-        
+
         // Set initial time range
         robotStatusTimeRange = parseInt(robotStatusTimeRangeInput.value, 10);
-        
+
         // Initialize empty historical data for each servo
         CONFIG.SERVOS.forEach(servo => {
             robotStatusHistoricalData.position[servo.id] = [];
             robotStatusHistoricalData.load[servo.id] = [];
             robotStatusHistoricalData.temperature[servo.id] = [];
         });
-        
+
         // Initialize charts
         initPositionChart(positionChartCanvas);
         initLoadChart(loadChartCanvas);
         initTemperatureChart(temperatureChartCanvas);
-        
+
         // Add event listeners
-        robotStatusTimeRangeInput.addEventListener('change', function() {
+        robotStatusTimeRangeInput.addEventListener('change', function () {
             robotStatusTimeRange = parseInt(robotStatusTimeRangeInput.value, 10);
             updateRobotStatusCharts();
         });
-        
+
         // Start update interval
         startRobotStatusUpdateInterval();
     }
-    
+
     // Initialize position chart
     function initPositionChart(canvas) {
         if (!canvas) {
             return;
         }
-        
+
         // Create datasets for each servo
         const datasets = CONFIG.SERVOS.map((servo, index) => {
             // Generate a color based on the index
             const hue = (index * 30) % 360;
             const color = `hsl(${hue}, 70%, 50%)`;
-            
+
             return {
                 label: `ID: ${servo.id}`,
                 data: [],
@@ -334,7 +339,7 @@ const UI = (() => {
                 tension: 0.2
             };
         });
-        
+
         // Create chart
         positionChart = new Chart(canvas, {
             type: 'line',
@@ -384,19 +389,19 @@ const UI = (() => {
             }
         });
     }
-    
+
     // Initialize load chart
     function initLoadChart(canvas) {
         if (!canvas) {
             return;
         }
-        
+
         // Create datasets for each servo
         const datasets = CONFIG.SERVOS.map((servo, index) => {
             // Generate a color based on the index
             const hue = (index * 30) % 360;
             const color = `hsl(${hue}, 70%, 50%)`;
-            
+
             return {
                 label: `ID: ${servo.id}`,
                 data: [],
@@ -407,7 +412,7 @@ const UI = (() => {
                 tension: 0.2
             };
         });
-        
+
         // Create chart
         loadChart = new Chart(canvas, {
             type: 'line',
@@ -457,19 +462,19 @@ const UI = (() => {
             }
         });
     }
-    
+
     // Initialize temperature chart
     function initTemperatureChart(canvas) {
         if (!canvas) {
             return;
         }
-        
+
         // Create datasets for each servo
         const datasets = CONFIG.SERVOS.map((servo, index) => {
             // Generate a color based on the index
             const hue = (index * 30) % 360;
             const color = `hsl(${hue}, 70%, 50%)`;
-            
+
             return {
                 label: `ID: ${servo.id}`,
                 data: [],
@@ -480,7 +485,7 @@ const UI = (() => {
                 tension: 0.2
             };
         });
-        
+
         // Create chart
         temperatureChart = new Chart(canvas, {
             type: 'line',
@@ -530,161 +535,161 @@ const UI = (() => {
             }
         });
     }
-    
+
     // Update robot status charts
     function updateRobotStatusCharts() {
         if (!positionChart || !loadChart || !temperatureChart) {
             return;
         }
-        
+
         // Calculate time range in milliseconds
         const timeRangeMs = robotStatusTimeRange * 1000;
-        
+
         // Filter data to only include points within the time range
         const now = Date.now();
-        
+
         // Get common time labels for all charts
         const timeLabels = new Set();
-        
+
         // Collect all timestamps from all servos and all data types
         CONFIG.SERVOS.forEach(servo => {
             // Position data
             robotStatusHistoricalData.position[servo.id]
                 .filter(point => (now - point.x) <= timeRangeMs)
                 .forEach(point => timeLabels.add(point.x));
-            
+
             // Load data
             robotStatusHistoricalData.load[servo.id]
                 .filter(point => (now - point.x) <= timeRangeMs)
                 .forEach(point => timeLabels.add(point.x));
-            
+
             // Temperature data
             robotStatusHistoricalData.temperature[servo.id]
                 .filter(point => (now - point.x) <= timeRangeMs)
                 .forEach(point => timeLabels.add(point.x));
         });
-        
+
         // Convert to array and sort
         const sortedLabels = Array.from(timeLabels).sort();
-        
+
         // Format labels for display
         const formattedLabels = sortedLabels.map(timestamp => {
             const date = new Date(timestamp);
             return date.toLocaleTimeString();
         });
-        
+
         // Update position chart
         updatePositionChart(sortedLabels, formattedLabels, timeRangeMs, now);
-        
+
         // Update load chart
         updateLoadChart(sortedLabels, formattedLabels, timeRangeMs, now);
-        
+
         // Update temperature chart
         updateTemperatureChart(sortedLabels, formattedLabels, timeRangeMs, now);
     }
-    
+
     // Update position chart
     function updatePositionChart(timestamps, formattedLabels, timeRangeMs, now) {
         if (!positionChart) {
             return;
         }
-        
+
         // Update chart labels
         positionChart.data.labels = formattedLabels;
-        
+
         // Update each dataset
         CONFIG.SERVOS.forEach((servo, index) => {
             // Get filtered data for this servo
             const servoData = robotStatusHistoricalData.position[servo.id] || [];
             const filteredData = servoData.filter(point => (now - point.x) <= timeRangeMs);
-            
+
             // Create a map of timestamp to value for quick lookup
             const dataMap = new Map();
             filteredData.forEach(point => {
                 dataMap.set(point.x, point.y);
             });
-            
+
             // Create data points for each timestamp
             const dataPoints = timestamps.map(timestamp => {
                 return dataMap.has(timestamp) ? dataMap.get(timestamp) : null;
             });
-            
+
             // Update dataset
             positionChart.data.datasets[index].data = dataPoints;
         });
-        
+
         // Update chart
         positionChart.update();
     }
-    
+
     // Update load chart
     function updateLoadChart(timestamps, formattedLabels, timeRangeMs, now) {
         if (!loadChart) {
             return;
         }
-        
+
         // Update chart labels
         loadChart.data.labels = formattedLabels;
-        
+
         // Update each dataset
         CONFIG.SERVOS.forEach((servo, index) => {
             // Get filtered data for this servo
             const servoData = robotStatusHistoricalData.load[servo.id] || [];
             const filteredData = servoData.filter(point => (now - point.x) <= timeRangeMs);
-            
+
             // Create a map of timestamp to value for quick lookup
             const dataMap = new Map();
             filteredData.forEach(point => {
                 dataMap.set(point.x, point.y);
             });
-            
+
             // Create data points for each timestamp
             const dataPoints = timestamps.map(timestamp => {
                 return dataMap.has(timestamp) ? dataMap.get(timestamp) : null;
             });
-            
+
             // Update dataset
             loadChart.data.datasets[index].data = dataPoints;
         });
-        
+
         // Update chart
         loadChart.update();
     }
-    
+
     // Update temperature chart
     function updateTemperatureChart(timestamps, formattedLabels, timeRangeMs, now) {
         if (!temperatureChart) {
             return;
         }
-        
+
         // Update chart labels
         temperatureChart.data.labels = formattedLabels;
-        
+
         // Update each dataset
         CONFIG.SERVOS.forEach((servo, index) => {
             // Get filtered data for this servo
             const servoData = robotStatusHistoricalData.temperature[servo.id] || [];
             const filteredData = servoData.filter(point => (now - point.x) <= timeRangeMs);
-            
+
             // Create a map of timestamp to value for quick lookup
             const dataMap = new Map();
             filteredData.forEach(point => {
                 dataMap.set(point.x, point.y);
             });
-            
+
             // Create data points for each timestamp
             const dataPoints = timestamps.map(timestamp => {
                 return dataMap.has(timestamp) ? dataMap.get(timestamp) : null;
             });
-            
+
             // Update dataset
             temperatureChart.data.datasets[index].data = dataPoints;
         });
-        
+
         // Update chart
         temperatureChart.update();
     }
-    
+
     // Initialize tab functionality
     function initTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
@@ -707,9 +712,17 @@ const UI = (() => {
                     console.log(`Activated tab: ${tabName}-tab`);
 
                     // If this is the status tab, make sure messages are visible
-                    if (tabName === 'status' && statusMessagesElement) {
-                        console.log('Status tab activated, scrolling messages into view');
-                        statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+                    if (tabName === 'status') {
+                        if (statusMessagesElement) {
+                            console.log('Status tab activated, scrolling messages into view');
+                            statusMessagesElement.scrollTop = statusMessagesElement.scrollHeight;
+                        }
+
+                        // Trigger resize for 3D visualization when status tab is activated
+                        if (HandVisualization3D) {
+                            console.log('Triggering resize for 3D visualization');
+                            HandVisualization3D.resize();
+                        }
                     }
                 } else {
                     console.error(`Tab content not found: ${tabName}-tab`);
@@ -888,15 +901,15 @@ const UI = (() => {
 
         // Set up event listeners for formula inputs
         setupFormulaInputEventListeners();
-        
+
         // Save configuration button
         const saveConfigButton = document.getElementById('save-config');
         if (saveConfigButton) {
-            saveConfigButton.addEventListener('click', function() {
+            saveConfigButton.addEventListener('click', function () {
                 saveConfiguration();
             });
         }
-        
+
         // Load configuration button
         const loadConfigButton = document.getElementById('load-config');
         const configFileInput = document.getElementById('config-file-input');
@@ -1094,16 +1107,16 @@ const UI = (() => {
 
             robotStatusTableElement.appendChild(row);
         });
-        
+
         // Store historical data for each servo
         const timestamp = Date.now();
-        
+
         servos.forEach(servo => {
             // Skip if servo ID is not defined
             if (servo.id === undefined) {
                 return;
             }
-            
+
             // Initialize arrays if they don't exist
             if (!robotStatusHistoricalData.position[servo.id]) {
                 robotStatusHistoricalData.position[servo.id] = [];
@@ -1114,42 +1127,42 @@ const UI = (() => {
             if (!robotStatusHistoricalData.temperature[servo.id]) {
                 robotStatusHistoricalData.temperature[servo.id] = [];
             }
-            
+
             // Add position data point if available
             if (servo.position !== undefined) {
                 robotStatusHistoricalData.position[servo.id].push({
                     x: timestamp,
                     y: servo.position
                 });
-                
+
                 // Limit data points to avoid memory issues
                 const maxDataPoints = 2 * 60 * 60; // 2 hours * 60 minutes * 60 seconds
                 if (robotStatusHistoricalData.position[servo.id].length > maxDataPoints) {
                     robotStatusHistoricalData.position[servo.id] = robotStatusHistoricalData.position[servo.id].slice(-maxDataPoints);
                 }
             }
-            
+
             // Add load data point if available
             if (servo.load !== undefined) {
                 robotStatusHistoricalData.load[servo.id].push({
                     x: timestamp,
                     y: servo.load
                 });
-                
+
                 // Limit data points
                 const maxDataPoints = 2 * 60 * 60;
                 if (robotStatusHistoricalData.load[servo.id].length > maxDataPoints) {
                     robotStatusHistoricalData.load[servo.id] = robotStatusHistoricalData.load[servo.id].slice(-maxDataPoints);
                 }
             }
-            
+
             // Add temperature data point if available
             if (servo.temperature !== undefined) {
                 robotStatusHistoricalData.temperature[servo.id].push({
                     x: timestamp,
                     y: servo.temperature
                 });
-                
+
                 // Limit data points
                 const maxDataPoints = 2 * 60 * 60;
                 if (robotStatusHistoricalData.temperature[servo.id].length > maxDataPoints) {
@@ -1281,6 +1294,23 @@ const UI = (() => {
         reader.readAsText(file);
     }
 
+    // Initialize 3D hand visualization
+    function initHandVisualization3D() {
+        if (!handVisualizationContainer) {
+            console.error('Hand visualization container not found');
+            return;
+        }
+
+        try {
+            // Initialize the 3D visualization
+            HandVisualization3D.init(handVisualizationContainer);
+            console.log('3D hand visualization initialized');
+        } catch (error) {
+            console.error('Error initializing 3D hand visualization:', error);
+            UI.showStatus(`Error initializing 3D visualization: ${error.message}`, 'error');
+        }
+    }
+
     // Public API
     return {
         /**
@@ -1353,30 +1383,30 @@ const UI = (() => {
          */
         updateCalculatedValues: function (positions) {
             updateCalculatedValuesTable(positions);
-            
+
             // Store historical data for each servo
             const timestamp = Date.now();
-            
+
             // Add data points for each servo
             for (const servoId in positions) {
                 const position = positions[servoId];
-                
+
                 // Skip if position is undefined
                 if (position === undefined) {
                     continue;
                 }
-                
+
                 // Initialize array if it doesn't exist
                 if (!historicalData[servoId]) {
                     historicalData[servoId] = [];
                 }
-                
+
                 // Add data point
                 historicalData[servoId].push({
                     x: timestamp,
                     y: position
                 });
-                
+
                 // Limit data points to avoid memory issues
                 // Keep 2 hours of data at most (assuming 1 data point per second)
                 const maxDataPoints = 2 * 60 * 60; // 2 hours * 60 minutes * 60 seconds
@@ -1425,7 +1455,18 @@ const UI = (() => {
                 UI.showStatus('Hand detected', 'info');
             } else {
                 UI.showStatus('No hand detected', 'warning');
+
+                // Clear 3D visualization when no hand is detected
+                HandVisualization3D.updateLandmarks(null);
             }
+        },
+
+        /**
+         * Update 3D visualization with new landmarks
+         * @param {Array} landmarks - The landmarks to visualize
+         */
+        update3DVisualization: function (landmarks) {
+            HandVisualization3D.updateLandmarks(landmarks);
         }
     };
 })();

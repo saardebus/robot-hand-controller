@@ -8,8 +8,8 @@ import CONFIG from './config.js';
 import FormulaParser from './formula-parser.js';
 import HandTracking from './hand-tracking.js';
 import ServoControl from './servo-control.js';
-import * as chart from '../lib/chart.js';
 import HandVisualization3D from './hand-visualization-3d.js';
+import * as chart from '../lib/chart.js';
 
 const UI = (() => {
     // Private variables

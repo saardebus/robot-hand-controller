@@ -89,13 +89,39 @@ const HandTracking = (() => {
         try {
             console.log('Starting model loading process...');
 
-            const vision = await FilesetResolver.forVisionTasks("./lib/wasm/");
+            // Check if running in Electron
+            const isElectron = (typeof process !== 'undefined') &&
+                (process.versions && process.versions.electron);
+
+            let wasmPath;
+            let modelPath;
+
+            if (isElectron) {
+                // In Electron, use absolute paths
+                console.log('Running in Electron environment, using absolute paths');
+
+                // Get the app path from the window global
+                const appPath = window.electronAppPath || '.';
+
+                wasmPath = `${appPath}/lib/wasm/`;
+                modelPath = `${appPath}/lib/model/hand_landmarker.task`;
+
+                console.log('WASM Path:', wasmPath);
+                console.log('Model Path:', modelPath);
+            } else {
+                // In browser, use relative paths
+                console.log('Running in browser environment, using relative paths');
+                wasmPath = "./lib/wasm/";
+                modelPath = "./lib/model/hand_landmarker.task";
+            }
+
+            const vision = await FilesetResolver.forVisionTasks(wasmPath);
 
             const landMarker = await HandLandmarker.createFromOptions(
                 vision,
                 {
                     baseOptions: {
-                        modelAssetPath: "./lib/model/hand_landmarker.task",
+                        modelAssetPath: modelPath,
                         delegate: "GPU"
                     },
                     numHands: 2

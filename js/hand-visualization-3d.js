@@ -84,7 +84,6 @@ const HandVisualization3D = (() => {
             [-0.12, -0.12, -0.12]  // 7
         ];
 
-
         const sphere = new THREE.Mesh(geometry, material);
         sphere.position.set(0, 0, 0);
         scene.add(sphere);

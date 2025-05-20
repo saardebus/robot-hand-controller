@@ -1,6 +1,6 @@
 {
   "name": "robot-hand-controller",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Robot Hand Control Application",
   "repository": {
     "type": "git",

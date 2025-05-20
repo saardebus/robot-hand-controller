@@ -200,6 +200,16 @@ const FormulaParser = (() => {
 
         return ast;
     }
+    const toVector = (a, b) => ({
+        x: b.x - a.x,
+        y: b.y - a.y,
+        z: b.z - a.z,
+    });
+
+    const normalize = (v) => {
+        const length = Math.hypot(v.x, v.y, v.z);
+        return { x: v.x / length, y: v.y / length, z: v.z / length };
+    };
 
     // Evaluate the AST with the given context
     function evaluate(ast, context) {
@@ -255,6 +265,48 @@ const FormulaParser = (() => {
                     return calculateDistance(landmark1, landmark2);
                 }
 
+                if (ast.name === 'rotationY') {
+                    if (args.length !== 3) {
+                        throw new Error('distance function requires exactly 2 arguments');
+                    }
+
+                    const landmark1 = getLandmark(args[0], context);
+                    const landmark2 = getLandmark(args[1], context);
+                    const landmark3 = getLandmark(args[2], context);
+
+                    if (!landmark1 || !landmark2 || !landmark3) {
+                        throw new Error(`Invalid landmark ID(s): ${args[0]}, ${args[1]}, ${args[2]}`);
+                    }
+
+                    // Camera looks along negative z-axis (0, 0, -1)
+                    const cameraDirection = { x: 0, y: -1, z: 0 };
+                    return rotation(landmark1, landmark2, landmark3, cameraDirection);
+                }
+
+                if (ast.name === 'map') {
+                    if (args.length !== 5) {
+                        throw new Error('map function requires exactly 5 arguments: value, domain_1_min, domain_1_max, domain_2_min, domain_2_max');
+                    }
+
+                    const value = args[0];
+                    const domain1Min = args[1];
+                    const domain1Max = args[2];
+                    const domain2Min = args[3];
+                    const domain2Max = args[4];
+
+                    // Check if value is outside domain 1
+                    if (value <= domain1Min) {
+                        return domain2Min;
+                    }
+                    if (value >= domain1Max) {
+                        return domain2Max;
+                    }
+
+                    // Map the value from domain 1 to domain 2
+                    const normalizedValue = (value - domain1Min) / (domain1Max - domain1Min);
+                    return domain2Min + normalizedValue * (domain2Max - domain2Min);
+                }
+
                 throw new Error(`Unknown function: ${ast.name}`);
 
             case 'variable':
@@ -282,6 +334,31 @@ const FormulaParser = (() => {
         const dz = landmark1.z3D - landmark2.z3D;
 
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    function rotation(landmark1, landmark2, landmark3, direction) {
+        const crossProduct = (v1, v2) => ({
+            x: v1.y * v2.z - v1.z * v2.y,
+            y: v1.z * v2.x - v1.x * v2.z,
+            z: v1.x * v2.y - v1.y * v2.x,
+        });
+
+        const dotProduct = (v1, v2) => v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+
+        // Define vectors from wrist (0) to index base (5) and pinky base (17)
+        const v1 = toVector(landmark1, landmark2);
+        const v2 = toVector(landmark1, landmark3);
+
+        // Compute the normal vector of the palm
+        let normal = crossProduct(v1, v2);
+        normal = normalize(normal);
+
+        // Dot product gives cos(theta)
+        const dot = dotProduct(normal, direction);
+        const angleRad = Math.acos(dot);
+        let angleDeg = angleRad * (180 / Math.PI);
+
+        return angleDeg;
     }
 
     // Helper function to get variable value from context
@@ -328,7 +405,7 @@ const FormulaParser = (() => {
          * @returns {number} The evaluated result
          * @throws {Error} If the formula is invalid or cannot be evaluated
          */
-        evaluate: function (formula, landmarks) {
+        evaluate: function (id, formula, landmarks) {
             try {
                 if (!formula || formula.trim() === '') {
                     throw new Error('Empty formula');
@@ -338,11 +415,17 @@ const FormulaParser = (() => {
                 const ast = parse(tokens);
                 const result = evaluate(ast, { landmarks });
 
+                let max = CONFIG.MAX_SERVO_VALUE
+
+                if (id == 11) {
+                    max = 4095;
+                }
+
                 // Clamp the result to the valid servo range and round to integer
                 return Math.round(
                     Math.max(
                         CONFIG.MIN_SERVO_VALUE,
-                        Math.min(CONFIG.MAX_SERVO_VALUE, result)
+                        Math.min(max, result)
                     )
                 );
             } catch (error) {

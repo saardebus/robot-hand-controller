@@ -168,7 +168,7 @@ const ServoControl = (() => {
 
             try {
                 // Evaluate the formula
-                const position = FormulaParser.evaluate(formula, landmarks);
+                const position = FormulaParser.evaluate(servoId, formula, landmarks);
                 calculatedPositions[servoId] = position;
             } catch (error) {
                 console.error(`Error evaluating formula for servo ${servoId}:`, error);
